@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-postgresql
+  labels:
+    app: go
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: go
+    tier: mysql
+  clusterIP: None
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-pv-claim
+  labels:
+    app: go
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-postgresql
+  labels:
+    app: go
+spec:
+  selector:
+    matchLabels:
+      app: go
+      tier: postgresql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: go
+        tier: postgresql
+    spec:
+      containers:
+      - image: merrytaka/postgresql:1.0.0
+        name: postgresql
+        ports:
+        - containerPort: 5432
+          name: postgresql
+        volumeMounts:
+        - name: postgresql-persistent-storage
+          mountPath: /var/lib/postgresql
+      volumes:
+      - name: postgresql-persistent-storage
+        persistentVolumeClaim:
+          claimName: postgresql-pv-claim

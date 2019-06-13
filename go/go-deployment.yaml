@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go
+  labels:
+    app: go
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: go
+    tier: backend
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: go-pv-claim
+  labels:
+    app: go
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: go
+  labels:
+    app: go
+spec:
+  selector:
+    matchLabels:
+      app: go
+      tier: backend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: go
+        tier: backend
+    spec:
+      containers:
+      - image: merrytaka/rest-api:1.0.0
+        name: go
+        env:
+        - name: HOSTNAME
+          value: go-postgresql
+        - name: USER
+          value: postgres
+        - name: DBNAME
+          value: wantedly
+        - name: PASSWORD
+          value: password
+        - name: CGO_ENABLED
+          value: "0"
+        - name: GO111MODULE
+          value: "on"
+        - name: PORT
+          value: "8080"     
+        - name: DB_PORT
+          value: "5432"
+        ports:
+        - containerPort: 8080 
+          name: go
+        volumeMounts:
+        - name: go-persistent-storage
+          mountPath: /var/www/html
+      volumes:
+      - name: go-persistent-storage
+        persistentVolumeClaim:
+          claimName: go-pv-claim
